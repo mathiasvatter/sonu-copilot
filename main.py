@@ -8,8 +8,9 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     win = MainWindow()
-    apply_stylesheet(app, theme='dark_teal.xml', extra={
-        'QTMATERIAL_PRIMARY_COLOR': '#ffffff',
+    apply_stylesheet(app, theme='dark_red.xml', extra={
+        'QTMATERIAL_PRIMARYCOLOR': '#ffffff',
     })
     win.show()
     sys.exit(app.exec())
+

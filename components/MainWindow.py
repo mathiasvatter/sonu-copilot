@@ -160,6 +160,8 @@ class MainWindow(QMainWindow):
         # Use your SVG here; replace filename if you have a dedicated "drop-files.svg"
         svg_path = resource_path("icons/download-icon.svg")
         drop_svg = QSvgWidget(str(svg_path), panel)
+        drop_svg.setStyleSheet("background: transparent; border: none;")
+        drop_svg.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
         # Let the icon be reasonably large; you can make it responsive (see resizeEvent below)
         drop_svg.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
