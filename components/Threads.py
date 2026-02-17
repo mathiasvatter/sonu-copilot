@@ -3,8 +3,14 @@ import os
 from PySide6.QtCore import QThread, Signal
 
 from components.SampleFileCheck import (
+    Wildcard,
     has_dash_3digit_suffix,
     has_leading_or_trailing_whitespace,
+    is_dynamic_token,
+    is_root_key_token,
+    is_round_robin_token,
+    is_velocity_token,
+    split_by_delimiter,
 )
 
 
@@ -14,12 +20,19 @@ class FileCheckThread(QThread):
     progress_size_updated = Signal(int)
     results_ready = Signal(str)
 
-    def __init__(self, files):
+    def __init__(self, files, schema=None, delimiter: str = "_"):
         super().__init__()
         self.files = files
+        self.schema = schema or []
+        self.delimiter = delimiter
         self.issues = {
             "Leading/Trailing Whitespace": [],
             "Reaper Suffix": [],
+            "Schema Length Mismatch": [],
+            "Velocity Format": [],
+            "RootKey Format": [],
+            "RoundRobin Format": [],
+            "Dynamic Format": [],
         }
 
     def run(self):
@@ -37,6 +50,13 @@ class FileCheckThread(QThread):
             has_reaper_suffix = has_dash_3digit_suffix(file_name)
             if has_reaper_suffix:
                 self.issues["Reaper Suffix"].append(f)
+
+            parts = split_by_delimiter(file_name, self.delimiter)
+            if self.schema:
+                if len(parts) != len(self.schema):
+                    self.issues["Schema Length Mismatch"].append(f)
+                else:
+                    self._check_schema_parts(parts, f)
 
             progress += 1
             self.progress_bar_updated.emit(progress)
@@ -61,3 +81,25 @@ class FileCheckThread(QThread):
             lines.append("")
         lines.append(f"Total issues: {total}")
         return "\n".join(lines)
+
+    def _check_schema_parts(self, parts, file_path: str) -> None:
+        for idx, raw in enumerate(self.schema):
+            try:
+                wildcard = Wildcard(raw)
+            except ValueError:
+                continue
+            token = parts[idx]
+
+            if wildcard == Wildcard.IGNORE:
+                continue
+            if wildcard == Wildcard.VELO_MIN_MAX and not is_velocity_token(token):
+                self.issues["Velocity Format"].append(file_path)
+                continue
+            if wildcard == Wildcard.ROOT_KEY and not is_root_key_token(token):
+                self.issues["RootKey Format"].append(file_path)
+                continue
+            if wildcard == Wildcard.ROUND_ROBIN and not is_round_robin_token(token):
+                self.issues["RoundRobin Format"].append(file_path)
+                continue
+            if wildcard == Wildcard.DYNAMIC and not is_dynamic_token(token):
+                self.issues["Dynamic Format"].append(file_path)

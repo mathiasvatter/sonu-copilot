@@ -1,6 +1,7 @@
 from pathlib import Path
 import re
 from typing import Optional, Tuple
+from enum import Enum
 
 _SUFFIX_3DIGIT_RE = re.compile(r"-\d{3}$")
 
@@ -21,6 +22,21 @@ def split_by_delimiter(filename: str, delimiter: str = "_") -> list[str]:
     """Split the filename stem by the given delimiter and return the parts."""
     stem = Path(filename).stem
     return stem.split(delimiter)
+
+
+class Wildcard(Enum):
+    GROUP_NAME = "GroupName"
+    INSTRUMENT_NAME = "InstrumentName"
+    ARTICULATION = "Articulation"
+    DYNAMIC = "Dynamic"
+    INTERVAL = "Interval"
+    VELO_MIN_MAX = "VeloMin-VeloMax"
+    ROOT_KEY = "RootKey"
+    IGNORE = "Ignore"
+    ROUND_ROBIN = "RoundRobin"
+
+    def __str__(self) -> str:
+        return self.value
 
 def get_root_key(filename: str, sep: str = "_") -> Optional[int]:
     """
@@ -65,6 +81,35 @@ def get_root_key(filename: str, sep: str = "_") -> Optional[int]:
     return None
 
 
+def is_root_key_token(token: str) -> bool:
+    note_re = re.compile(r"^(?P<note>[A-Ga-g])(?P<accidental>#|b)?(?P<octave>-?\d+)$")
+    base = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+    m = note_re.match(token)
+    if not m:
+        return False
+    note = m.group("note").upper()
+    acc = m.group("accidental")
+    try:
+        octave = int(m.group("octave"), 10)
+    except ValueError:
+        return False
+    if octave < 0 or octave > 8:
+        return False
+    semitone = base[note]
+    if acc == "#":
+        semitone += 1
+    elif acc == "b":
+        semitone -= 1
+    if semitone < 0:
+        semitone += 12
+        octave -= 1
+    elif semitone > 11:
+        semitone -= 12
+        octave += 1
+    midi = (octave + 1) * 12 + semitone
+    return 0 <= midi <= 128
+
+
 def get_velocity(filename: str, sep: str = "_") -> Optional[Tuple[int, int]]:
     """
     Searches for velocity information in filename.
@@ -88,6 +133,22 @@ def get_velocity(filename: str, sep: str = "_") -> Optional[Tuple[int, int]]:
     return None
 
 
+def is_velocity_token(token: str) -> bool:
+    if "-" not in token:
+        return False
+    velo_table = token.split("-")
+    if len(velo_table) != 2:
+        return False
+    try:
+        velo_min = int(velo_table[0], 10)
+        velo_max = int(velo_table[1], 10)
+    except ValueError:
+        return False
+    if not (0 <= velo_min <= 127 and 0 <= velo_max <= 127):
+        return False
+    return velo_min != velo_max
+
+
 def get_dynamic(filename: str, sep: str = "_") -> Optional[str]:
     """
     Searches for dynamic marking in filename.
@@ -102,6 +163,11 @@ def get_dynamic(filename: str, sep: str = "_") -> Optional[str]:
             return dyn
 
     return None
+
+
+def is_dynamic_token(token: str) -> bool:
+    dynamics = ["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"]
+    return token in dynamics
 
 
 def get_round_robin(filename: str, sep: str = "_") -> Optional[int]:
@@ -119,3 +185,15 @@ def get_round_robin(filename: str, sep: str = "_") -> Optional[int]:
                 return int(match.group(1))
 
     return None
+
+
+def is_round_robin_token(token: str) -> bool:
+    token_upper = token.upper()
+    match = re.fullmatch(r"RR-?(\d+)", token_upper)
+    if not match:
+        return False
+    try:
+        int(match.group(1))
+    except ValueError:
+        return False
+    return True

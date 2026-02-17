@@ -205,7 +205,11 @@ class MainWindow(QMainWindow):
 
         # worker threads
         self.threads = [
-            FileCheckThread(files=self.all_paths)
+            FileCheckThread(
+                files=self.all_paths,
+                schema=self.schema_items,
+                delimiter=self.schema_delimiter,
+            )
         ]
 
         self.thread = self.threads[self.combo.currentIndex()]
