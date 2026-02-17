@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 
 from pathlib import Path
 
-from components.Threads import FileCheckThread
+from components.Threads import AudioFileCheckThread, FileCheckThread
 from components.SchemaSettingsDialog import SchemaSettingsDialog
 from utils.paths import resource_path
 
@@ -89,9 +89,10 @@ class MainWindow(QMainWindow):
         self.progress_bar.setMaximum(100)
         self.progress_bar.setTextVisible(True)
         self.progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.progress_bar.setMinimumWidth(480)
+        # self.progress_bar.setFixedWidth(480)
         v.addWidget(self.progress_label)
         v.addWidget(self.progress_bar)
+        self.progress_widget.setFixedWidth(480)
 
         # --- Result widget
         self.result_widget = QWidget(self)
@@ -130,13 +131,15 @@ class MainWindow(QMainWindow):
         bottom = QHBoxLayout()
         bottom.setContentsMargins(20, 0, 20, 10)
         self.combo = QComboBox(self)
-        self.combo.addItems(["Filename Check"])
+        self.combo.addItems(["Filename Check", "Audio File Check"])
         self.combo.setMinimumWidth(280)
         self.btn_setup = QPushButton("Setup", self)
         self.btn_setup.clicked.connect(self.on_setup_clicked)
+        self.combo.currentIndexChanged.connect(self.update_setup_button)
         bottom.addWidget(self.combo, 1, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
         bottom.addWidget(self.btn_setup, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
         root.addLayout(bottom)
+        self.update_setup_button()
 
         # Collected file list
         self.all_paths: List[str] = []
@@ -211,7 +214,8 @@ class MainWindow(QMainWindow):
                 files=self.all_paths,
                 schema=self.schema_items,
                 delimiter=self.schema_delimiter,
-            )
+            ),
+            AudioFileCheckThread(files=self.all_paths),
         ]
 
         self.thread = self.threads[self.combo.currentIndex()]
@@ -275,4 +279,8 @@ class MainWindow(QMainWindow):
                 self.schema_items = dialog.get_schema()
                 print("[SETUP] Updated schema:", self.schema_delimiter, self.schema_items)
             return
-        print(f"[SETUP] Open settings for mode: {mode}")
+        return
+
+    def update_setup_button(self):
+        mode = self.combo.currentText()
+        self.btn_setup.setEnabled(mode == "Filename Check")

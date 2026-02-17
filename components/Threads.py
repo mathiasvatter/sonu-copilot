@@ -2,6 +2,7 @@ import os
 
 from PySide6.QtCore import QThread, Signal
 
+from components.AudioFileCheck import is_wav_silent, wav_riff_size_matches_file
 from components.SampleFileCheck import (
     Wildcard,
     has_dash_3digit_suffix,
@@ -103,3 +104,59 @@ class FileCheckThread(QThread):
                 continue
             if wildcard == Wildcard.DYNAMIC and not is_dynamic_token(token):
                 self.issues["Dynamic Format"].append(file_path)
+
+
+class AudioFileCheckThread(QThread):
+    progress_bar_updated = Signal(int)
+    progress_label_updated = Signal(str)
+    progress_size_updated = Signal(int)
+    results_ready = Signal(str)
+
+    def __init__(self, files):
+        super().__init__()
+        self.files = files
+        self.issues = {
+            "Silent Audio": [],
+            "RIFF Size Mismatch": [],
+            "Unreadable WAV": [],
+        }
+
+    def run(self):
+        self.progress_size_updated.emit(len(self.files))
+        progress = 0
+        for f in self.files:
+            _file_name, file_ext = os.path.splitext(f)
+            if file_ext.lower() != ".wav":
+                continue
+
+            try:
+                if is_wav_silent(f):
+                    self.issues["Silent Audio"].append(f)
+                if not wav_riff_size_matches_file(f):
+                    self.issues["RIFF Size Mismatch"].append(f)
+            except Exception:
+                self.issues["Unreadable WAV"].append(f)
+
+            progress += 1
+            self.progress_bar_updated.emit(progress)
+            self.progress_label_updated.emit(f)
+
+        self.results_ready.emit(self.results_text())
+        print("[INFO] Audio file check complete. Issues found:")
+        for issue, files in self.issues.items():
+            print(f"  {issue}: {len(files)} files")
+
+    def results_text(self) -> str:
+        lines = ["Audio File Check Results", ""]
+        total = 0
+        for issue, files in self.issues.items():
+            count = len(files)
+            total += count
+            lines.append(f"{issue}: {count}")
+            for f in files[:10]:
+                lines.append(f"  - {f}")
+            if count > 10:
+                lines.append("  - ...")
+            lines.append("")
+        lines.append(f"Total issues: {total}")
+        return "\n".join(lines)
