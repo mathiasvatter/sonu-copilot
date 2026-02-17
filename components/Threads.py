@@ -11,7 +11,7 @@ from components.SampleFileCheck import (
     is_root_key_token,
     is_round_robin_token,
     is_velocity_token,
-    split_by_delimiter,
+    split_by_delimiter, is_semitones_token, is_up_do_token,
 )
 
 
@@ -33,6 +33,8 @@ class FileCheckThread(QThread):
             "Velocity Format": [],
             "RootKey Format": [],
             "RoundRobin Format": [],
+            "Semitones Format": [],
+            "Up/Down Format": [],
             "Dynamic Format": [],
         }
 
@@ -104,6 +106,11 @@ class FileCheckThread(QThread):
                 continue
             if wildcard == Wildcard.DYNAMIC and not is_dynamic_token(token):
                 self.issues["Dynamic Format"].append(file_path)
+            if wildcard == Wildcard.SEMITONES and not is_semitones_token(token):
+                self.issues["Semitones Format"].append(file_path)
+            if wildcard == Wildcard.UP_DOWN and is_up_do_token(token):
+                self.issues["Up/Down Format"].append(file_path)
+
 
 
 class AudioFileCheckThread(QThread):

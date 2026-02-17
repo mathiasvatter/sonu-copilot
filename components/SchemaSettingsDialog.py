@@ -17,17 +17,47 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
 )
 
+from components.SampleFileCheck import Wildcard
 
-WILDCARDS = [
-    "GroupName",
-    "InstrumentName",
-    "Articulation",
-    "Dynamic",
-    "Interval",
-    "VeloMin-VeloMax",
-    "RootKey",
-    "Ignore",
-]
+WILDCARDS = [wildcard.value for wildcard in Wildcard]
+
+SCHEMA_PRESETS = {
+    "Custom": (None, None),
+    "One Shot (InstrumentName_Articulation_MicPosition_VeloMin-VeloMax_RoundRobin_RootKey)": (
+        "_",
+        [
+            "InstrumentName",
+            "Articulation",
+            "MicPosition",
+            "VeloMin-VeloMax",
+            "RoundRobin",
+            "RootKey",
+        ],
+    ),
+    "Transition (InstrumentName_Articulation_MicPosition_Dynamic_Up/Down_RootKey)": (
+        "_",
+        [
+            "InstrumentName",
+            "Articulation",
+            "MicPosition",
+            "Dynamic",
+            "Up/Down",
+            "RootKey",
+        ],
+    ),
+    "Interval (InstrumentName_Articulation_Semitones_MicPosition_VeloMin-VeloMax_RoundRobin_RootKey)": (
+        "_",
+        [
+            "InstrumentName",
+            "Articulation",
+            "Semitones",
+            "MicPosition",
+            "VeloMin-VeloMax",
+            "RoundRobin",
+            "RootKey",
+        ],
+    ),
+}
 
 
 class SchemaSettingsDialog(QDialog):
@@ -37,6 +67,15 @@ class SchemaSettingsDialog(QDialog):
         self.setMinimumSize(520, 360)
 
         root = QVBoxLayout(self)
+
+        # Presets row
+        preset_row = QHBoxLayout()
+        preset_row.addWidget(QLabel("Preset:", self))
+        self.preset_combo = QComboBox(self)
+        self.preset_combo.addItems(SCHEMA_PRESETS.keys())
+        self.preset_combo.currentTextChanged.connect(self.apply_preset)
+        preset_row.addWidget(self.preset_combo, 1)
+        root.addLayout(preset_row)
 
         # Delimiter row
         delim_row = QHBoxLayout()
@@ -128,6 +167,14 @@ class SchemaSettingsDialog(QDialog):
         self.rows_list.takeItem(self.rows_list.row(item))
         self.update_preview()
 
+    def clear_rows(self) -> None:
+        while self.rows_list.count() > 0:
+            item = self.rows_list.takeItem(0)
+            row = self.rows_list.itemWidget(item)
+            if row is not None:
+                row.setParent(None)
+                row.deleteLater()
+
     def get_schema(self) -> List[str]:
         items: List[str] = []
         for i in range(self.rows_list.count()):
@@ -150,6 +197,19 @@ class SchemaSettingsDialog(QDialog):
         schema = self.get_schema()
         self.preview_label.setText(delimiter.join(schema))
         self._update_validation(schema)
+
+    def apply_preset(self, preset_name: str) -> None:
+        preset = SCHEMA_PRESETS.get(preset_name)
+        if not preset:
+            return
+        delimiter, schema = preset
+        if delimiter is None or schema is None:
+            return
+        self.delim_input.setText(delimiter)
+        self.clear_rows()
+        for item in schema:
+            self.add_row(selected=item)
+        self.update_preview()
 
     def _update_validation(self, schema: List[str]) -> None:
         counts = {}

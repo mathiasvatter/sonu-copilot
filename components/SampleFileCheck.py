@@ -34,6 +34,9 @@ class Wildcard(Enum):
     ROOT_KEY = "RootKey"
     IGNORE = "Ignore"
     ROUND_ROBIN = "RoundRobin"
+    UP_DOWN = "Up/Down"
+    MIC_POSITION = "MicPosition"
+    SEMITONES = "Semitones"
 
     def __str__(self) -> str:
         return self.value
@@ -194,6 +197,29 @@ def is_round_robin_token(token: str) -> bool:
         return False
     try:
         int(match.group(1))
+    except ValueError:
+        return False
+    return True
+
+def is_up_do_token(token: str) -> bool:
+    token_upper = token.upper()
+    # allow UP1 or DO1
+    match = re.fullmatch(r"(UP|DO)(\d+)", token_upper)
+    if not match:
+        return False
+    try:
+        int(match.group(1))
+    except ValueError:
+        return False
+    return True
+
+def is_semitones_token(token: str) -> bool:
+    # allow only a number with optional leading + or -
+    match = re.fullmatch(r"[+-]?\d+", token)
+    if not match:
+        return False
+    try:
+        int(token)
     except ValueError:
         return False
     return True
