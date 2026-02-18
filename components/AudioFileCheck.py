@@ -61,3 +61,44 @@ def wav_riff_size_matches_file(file_path: str) -> bool:
     riff_size = int.from_bytes(header[4:8], byteorder="little", signed=False)
     return riff_size == (file_size - 8)
 
+
+def wav_has_loop_points(file_path: str) -> bool:
+    """
+    Return True if a WAV file declares loop points in a 'smpl' chunk.
+    This checks NumSampleLoops > 0 in the sampler chunk.
+    """
+    path = Path(file_path)
+    if path.suffix.lower() != ".wav":
+        raise ValueError(f"Unsupported file type: {path.suffix}")
+
+    file_size = os.path.getsize(path)
+    if file_size < 12:
+        return False
+
+    with open(path, "rb") as f:
+        header = f.read(12)
+        if header[:4] != b"RIFF" or header[8:12] != b"WAVE":
+            return False
+
+        # Iterate RIFF chunks
+        while True:
+            chunk_header = f.read(8)
+            if len(chunk_header) < 8:
+                break
+            chunk_id = chunk_header[:4]
+            chunk_size = int.from_bytes(chunk_header[4:8], byteorder="little", signed=False)
+
+            if chunk_id == b"smpl":
+                if chunk_size < 36:
+                    return False
+                smpl_data = f.read(36)
+                if len(smpl_data) < 36:
+                    return False
+                num_loops = int.from_bytes(smpl_data[28:32], byteorder="little", signed=False)
+                return num_loops > 0
+
+            # Skip chunk data (plus padding byte if size is odd)
+            skip = chunk_size + (chunk_size % 2)
+            f.seek(skip, os.SEEK_CUR)
+
+    return False

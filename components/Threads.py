@@ -2,7 +2,11 @@ import os
 
 from PySide6.QtCore import QThread, Signal
 
-from components.AudioFileCheck import is_wav_silent, wav_riff_size_matches_file
+from components.AudioFileCheck import (
+    is_wav_silent,
+    wav_riff_size_matches_file,
+    wav_has_loop_points,
+)
 from components.SampleFileCheck import (
     Wildcard,
     has_dash_3digit_suffix,
@@ -125,6 +129,7 @@ class AudioFileCheckThread(QThread):
         self.issues = {
             "Silent Audio": [],
             "RIFF Size Mismatch": [],
+            "Missing Loop Points": [],
             "Unreadable WAV": [],
         }
 
@@ -141,6 +146,8 @@ class AudioFileCheckThread(QThread):
                     self.issues["Silent Audio"].append(f)
                 if not wav_riff_size_matches_file(f):
                     self.issues["RIFF Size Mismatch"].append(f)
+                if not wav_has_loop_points(f):
+                    self.issues["Missing Loop Points"].append(f)
             except Exception:
                 self.issues["Unreadable WAV"].append(f)
 
