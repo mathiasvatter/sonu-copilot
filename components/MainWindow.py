@@ -98,6 +98,7 @@ class MainWindow(QMainWindow):
         # --- Result widget
         self.result_widget = QWidget(self)
         r = QVBoxLayout(self.result_widget)
+        r.setContentsMargins(20, 10, 20, 10)
         self.result_text = QTextEdit(self.result_widget)
         self.result_text.setReadOnly(True)
         self.result_text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
@@ -121,10 +122,10 @@ class MainWindow(QMainWindow):
 
         # --- Stack: [drop area] <-> [progress]
         self.stack = QStackedLayout()
-        self.stack.setContentsMargins(10, 0, 10, 0)
+        self.stack.setContentsMargins(20, 0, 20, 10)
         self.stack.addWidget(self.drop_panel)  # index 0
         self.stack.addWidget(place_widget(self.progress_widget, 1, Qt.AlignmentFlag.AlignCenter))  # index 1
-        self.stack.addWidget(self.result_widget)  # index 2
+        self.stack.addWidget(self.result_widget)
         self.stack.setCurrentIndex(0)
         root.addLayout(self.stack, 1)
 
