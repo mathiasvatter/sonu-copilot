@@ -16,3 +16,19 @@ def shorten_path(path: str | Path, num_parents: int) -> Path:
     parts = p.parts
 
     return Path(*parts[-num_parents:])
+
+import xml.etree.ElementTree as ET
+
+def get_primary_color() -> str:
+    # Use primaryColor from the local qt_material theme file if available.
+    primary_color = "#d4af37"
+    try:
+        theme_path = resource_path("themes/dark_gold.xml")
+        tree = ET.parse(theme_path)
+        for color_el in tree.getroot().iter("color"):
+            if color_el.attrib.get("name") == "primaryColor" and color_el.text:
+                primary_color = color_el.text.strip()
+                break
+    except Exception:
+        pass
+    return primary_color

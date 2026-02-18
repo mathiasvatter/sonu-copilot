@@ -214,12 +214,15 @@ def is_up_do_token(token: str) -> bool:
     return True
 
 def is_semitones_token(token: str) -> bool:
-    # allow only a number with optional leading + or -
-    match = re.fullmatch(r"[+-]?\d+", token)
-    if not match:
+    # allow a single number (optional + or -) or a hyphen-separated sequence like 1-5-1
+    if not re.fullmatch(r"[+-]?\d+(?:-[+-]?\d+)*", token):
         return False
-    try:
-        int(token)
-    except ValueError:
-        return False
+    parts = token.split("-")
+    for part in parts:
+        if part in ("", "+", "-"):
+            return False
+        try:
+            int(part)
+        except ValueError:
+            return False
     return True

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import List
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -18,11 +19,23 @@ from PySide6.QtWidgets import (
 )
 
 from components.SampleFileCheck import Wildcard
+from utils.paths import resource_path
 
 WILDCARDS = [wildcard.value for wildcard in Wildcard]
 
 SCHEMA_PRESETS = {
     "Custom": (None, None),
+    "Sustain (InstrumentName_Articulation_MicPosition_VeloMin-VeloMax_RoundRobin_RootKey)": (
+            "_",
+            [
+                "InstrumentName",
+                "Articulation",
+                "MicPosition",
+                "VeloMin-VeloMax",
+                "RoundRobin",
+                "RootKey",
+            ],
+        ),
     "One Shot (InstrumentName_Articulation_MicPosition_VeloMin-VeloMax_RoundRobin_RootKey)": (
         "_",
         [
@@ -67,6 +80,7 @@ class SchemaSettingsDialog(QDialog):
         self.setMinimumSize(520, 360)
 
         root = QVBoxLayout(self)
+        root.setContentsMargins(20, 20, 20, 10)
 
         # Presets row
         preset_row = QHBoxLayout()
@@ -146,7 +160,15 @@ class SchemaSettingsDialog(QDialog):
             combo.setCurrentText(selected)
         combo.currentTextChanged.connect(self.update_preview)
 
-        remove_btn = QPushButton("Remove", row)
+        remove_btn = QPushButton(row)
+        # remove_btn.setFlat(True)
+        # delete_icon_path = resource_path("icons/delete.svg")
+        # if delete_icon_path.exists():
+        #     remove_btn.setIcon(QIcon(str(delete_icon_path)))
+        #     remove_btn.setIconSize(QSize(16, 16))
+        #     remove_btn.setFixedSize(20, 20)
+        # else:
+        remove_btn.setText("Remove")
         item = QListWidgetItem(self.rows_list)
         self.rows_list.addItem(item)
         self.rows_list.setItemWidget(item, row)

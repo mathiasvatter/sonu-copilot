@@ -5,7 +5,7 @@ from typing import List
 import os
 
 from PySide6.QtCore import Qt, QMimeData
-from PySide6.QtGui import QDragEnterEvent, QDropEvent, QPixmap, QIcon, QColor, QFont
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QPixmap, QIcon, QColor, QFont, QFontDatabase
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout,
@@ -14,11 +14,11 @@ from PySide6.QtWidgets import (
 )
 
 from pathlib import Path
-import xml.etree.ElementTree as ET
 
 from components.Threads import AudioFileCheckThread, FileCheckThread
 from components.SchemaSettingsDialog import SchemaSettingsDialog
-from utils.paths import resource_path
+from utils.paths import resource_path, get_primary_color
+
 
 def place_widget(widget: QWidget, stretch: int, alignment: Qt.AlignmentFlag) -> QWidget:
     """Helper to center/align a widget inside another container."""
@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
     progress_label: QLabel
     progress_bar: QProgressBar
     result_widget: QWidget
+    result_status: QLabel
     result_text: QTextEdit
     result_copy_btn: QPushButton
     result_btn: QPushButton
@@ -99,16 +100,27 @@ class MainWindow(QMainWindow):
         self.result_widget = QWidget(self)
         r = QVBoxLayout(self.result_widget)
         r.setContentsMargins(20, 10, 20, 10)
+        self.result_status = QLabel("", self.result_widget)
+        self.result_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.result_status.setStyleSheet(
+            f"font-size: 24px; font-weight: 700; color: {get_primary_color()};"
+        )
         self.result_text = QTextEdit(self.result_widget)
         self.result_text.setReadOnly(True)
         self.result_text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
-        mono = QFont("Fira Code")
-        mono.setStyleHint(QFont.StyleHint.Monospace)
+        mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         mono.setFixedPitch(True)
+        # Prefer common monospace fonts if available.
+        for family in ("Monaco", "Menlo", "Consolas", "Courier New"):
+            if family in QFontDatabase.families():
+                mono.setFamily(family)
+                print(f"[INFO] Using monospace font: {family}")
+                break
+        mono.setStyleHint(QFont.StyleHint.Monospace)
         self.result_text.setFont(mono)
-        self.result_text.setStyleSheet(
-            "QTextEdit { background: #111; color: #eaeaea; padding: 10px; }"
-        )
+        # self.result_text.setStyleSheet(
+        #     "QTextEdit { background: #111; color: #eaeaea; padding: 10px; }"
+        # )
         self.result_copy_btn = QPushButton("Copy Results", self.result_widget)
         self.result_copy_btn.clicked.connect(self.on_copy_results_clicked)
         self.result_btn = QPushButton("Back to Drop", self.result_widget)
@@ -117,6 +129,7 @@ class MainWindow(QMainWindow):
         btn_row.addWidget(self.result_copy_btn, 0, Qt.AlignmentFlag.AlignLeft)
         btn_row.addStretch(1)
         btn_row.addWidget(self.result_btn, 0, Qt.AlignmentFlag.AlignRight)
+        r.addWidget(self.result_status)
         r.addWidget(self.result_text)
         r.addLayout(btn_row)
 
@@ -172,18 +185,8 @@ class MainWindow(QMainWindow):
         drop_svg.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         drop_svg.setFixedSize(100, 100)  # tweak to taste
 
-        # Use primaryColor from the local qt_material theme file if available.
-        primary_color = "#d4af37"
-        try:
-            theme_path = resource_path("themes/dark_gold.xml")
-            tree = ET.parse(theme_path)
-            for color_el in tree.getroot().iter("color"):
-                if color_el.attrib.get("name") == "primaryColor" and color_el.text:
-                    primary_color = color_el.text.strip()
-                    break
-        except Exception:
-            pass
 
+        primary_color = get_primary_color()
         drop_caption = QLabel("Drop files or folders here", panel)
         drop_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
         drop_caption.setAccessibleDescription(
@@ -244,6 +247,10 @@ class MainWindow(QMainWindow):
     # ---------- Helpers ----------
     def on_thread_results(self, text: str):
         self.result_text.setPlainText(text)
+        if "Total issues: 0" in text:
+            self.result_status.setText("Congratulations! You're good to go! 🎉")
+        else:
+            self.result_status.setText("You Fucked up! 😱")
         self.stack.setCurrentIndex(2)
 
     def on_thread_finished(self):
