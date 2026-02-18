@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 from components.Threads import AudioFileCheckThread, FileCheckThread
 from components.SchemaSettingsDialog import SchemaSettingsDialog
@@ -170,15 +171,27 @@ class MainWindow(QMainWindow):
         drop_svg.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         drop_svg.setFixedSize(100, 100)  # tweak to taste
 
+        # Use primaryColor from the local qt_material theme file if available.
+        primary_color = "#d4af37"
+        try:
+            theme_path = resource_path("themes/dark_gold.xml")
+            tree = ET.parse(theme_path)
+            for color_el in tree.getroot().iter("color"):
+                if color_el.attrib.get("name") == "primaryColor" and color_el.text:
+                    primary_color = color_el.text.strip()
+                    break
+        except Exception:
+            pass
+
         drop_caption = QLabel("Drop files or folders here", panel)
         drop_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
         drop_caption.setAccessibleDescription(
             "Drop your files/folders here to collect them for batch processing."
         )
         # optional styling
-        drop_caption.setStyleSheet("font-size: 16px; color: #666;")
+        drop_caption.setStyleSheet(f"font-size: 16px; color: {primary_color};")
         effect = QGraphicsColorizeEffect(drop_svg)
-        effect.setColor(QColor("#666"))  # gleiche Farbe wie Caption
+        effect.setColor(QColor(primary_color))  # gleiche Farbe wie Caption
         effect.setStrength(1.0)  # 0..1
         drop_svg.setGraphicsEffect(effect)
 
