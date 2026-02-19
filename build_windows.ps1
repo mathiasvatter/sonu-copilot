@@ -10,7 +10,14 @@ if (Test-Path 'dist') {
 $appName = 'Sonu Co-Pilot'
 $entryPoint = 'main.py'
 $iconPath = 'icons/sonu.ico'
-$appVersion = '0.0.1'
+$versionFile = Join-Path $rootDir 'VERSION'
+if (-not (Test-Path $versionFile)) {
+    throw "Missing version file at $versionFile"
+}
+$appVersion = (Get-Content -Raw $versionFile).Trim()
+if ([string]::IsNullOrWhiteSpace($appVersion)) {
+    throw "VERSION file is empty"
+}
 
 $activateScripts = @(
     '.venv/Scripts/Activate.ps1',
