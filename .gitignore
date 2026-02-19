@@ -42,6 +42,7 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
+*.zip
 
 # Python specific
 venv/

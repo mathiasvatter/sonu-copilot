@@ -24,7 +24,7 @@ WILDCARDS = [wildcard.value for wildcard in Wildcard]
 
 SCHEMA_PRESETS = {
     "Custom": (None, None),
-    "Sustain (InstrumentName_Articulation_MicPosition_VeloMin-VeloMax_RoundRobin_RootKey)": (
+    "Sustain": (
             "_",
             [
                 "InstrumentName",
@@ -35,7 +35,7 @@ SCHEMA_PRESETS = {
                 "RootKey",
             ],
         ),
-    "One Shot (InstrumentName_Articulation_MicPosition_VeloMin-VeloMax_RoundRobin_RootKey)": (
+    "One Shot": (
         "_",
         [
             "InstrumentName",
@@ -46,7 +46,7 @@ SCHEMA_PRESETS = {
             "RootKey",
         ],
     ),
-    "Transition (InstrumentName_Articulation_MicPosition_Dynamic_Up/Down_RootKey)": (
+    "Transition": (
         "_",
         [
             "InstrumentName",
@@ -57,7 +57,7 @@ SCHEMA_PRESETS = {
             "RootKey",
         ],
     ),
-    "Interval (InstrumentName_Articulation_Semitones_MicPosition_VeloMin-VeloMax_RoundRobin_RootKey)": (
+    "Interval": (
         "_",
         [
             "InstrumentName",
@@ -246,6 +246,7 @@ class SchemaSettingsDialog(QDialog):
     def update_preview(self) -> None:
         delimiter = self.get_delimiter()
         schema = self.get_schema()
+        self._sync_preset_combo(delimiter, schema)
         self.preview_label.setText(delimiter.join(schema))
         self._update_validation(schema)
 
@@ -277,3 +278,20 @@ class SchemaSettingsDialog(QDialog):
         else:
             self.warning_label.setText("")
             self.ok_btn.setEnabled(True)
+
+    def _matching_preset_name(self, delimiter: str, schema: List[str]) -> str:
+        for name, preset in SCHEMA_PRESETS.items():
+            if name == "Custom":
+                continue
+            preset_delim, preset_schema = preset
+            if preset_delim == delimiter and preset_schema == schema:
+                return name
+        return "Custom"
+
+    def _sync_preset_combo(self, delimiter: str, schema: List[str]) -> None:
+        target = self._matching_preset_name(delimiter, schema)
+        if self.preset_combo.currentText() == target:
+            return
+        blocked = self.preset_combo.blockSignals(True)
+        self.preset_combo.setCurrentText(target)
+        self.preset_combo.blockSignals(blocked)

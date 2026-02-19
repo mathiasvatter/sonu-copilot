@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import List
 import os, sys
 
-from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtCore import Qt, QMimeData, QSettings
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QPixmap, QIcon, QColor, QFont, QFontDatabase
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (
@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 from pathlib import Path
 
 from components.Threads import AudioFileCheckThread, FileCheckThread
-from components.SchemaSettingsDialog import SchemaSettingsDialog
+from components.SchemaSettingsDialog import SchemaSettingsDialog, SCHEMA_PRESETS
 from utils.paths import resource_path, get_primary_color
 
 
@@ -47,7 +47,9 @@ class MainWindow(QMainWindow):
     stack: QStackedLayout
     combo: QComboBox
     btn_setup: QPushButton
+    active_preset_label: QLabel
     all_paths: List[str]
+    settings: QSettings
 
     def set_icon(self):
         icon_candidate = "icons/sonu.icns"
@@ -59,6 +61,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.settings = QSettings("Sonu", "CoPilot")
         self.thread = None
         self.threads = []
         self.setWindowTitle("Sonu Co-Pilot")
@@ -174,9 +177,10 @@ class MainWindow(QMainWindow):
             "VeloMin-VeloMax",
             "RootKey",
         ]
+        self._load_schema_settings()
+        self._update_active_preset_label()
 
-    @staticmethod
-    def createDropPanel(panel: QWidget):
+    def createDropPanel(self, panel: QWidget):
         col = QVBoxLayout(panel)
         col.setContentsMargins(0, 0, 0, 0)
         col.setSpacing(4)
@@ -208,6 +212,10 @@ class MainWindow(QMainWindow):
 
         col.addWidget(drop_svg, 0, Qt.AlignmentFlag.AlignCenter)
         col.addWidget(drop_caption, 0, Qt.AlignmentFlag.AlignCenter)
+        self.active_preset_label = QLabel("", panel)
+        self.active_preset_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.active_preset_label.setStyleSheet(f"font-size: 12px; color: {primary_color};")
+        col.addWidget(self.active_preset_label, 0, Qt.AlignmentFlag.AlignCenter)
 
 
     # ---------- Drag & Drop ----------
@@ -305,6 +313,8 @@ class MainWindow(QMainWindow):
             if dialog.exec():
                 self.schema_delimiter = dialog.get_delimiter()
                 self.schema_items = dialog.get_schema()
+                self._save_schema_settings()
+                self._update_active_preset_label()
                 print("[SETUP] Updated schema:", self.schema_delimiter, self.schema_items)
             return
         return
@@ -312,3 +322,32 @@ class MainWindow(QMainWindow):
     def update_setup_button(self):
         mode = self.combo.currentText()
         self.btn_setup.setEnabled(mode == "Filename Check")
+
+    def _load_schema_settings(self) -> None:
+        delimiter = self.settings.value("schema/delimiter", self.schema_delimiter)
+        if isinstance(delimiter, str) and delimiter:
+            self.schema_delimiter = delimiter
+
+        items = self.settings.value("schema/items", self.schema_items)
+        if isinstance(items, str):
+            items = [x for x in items.split(",") if x]
+        if isinstance(items, list) and items:
+            self.schema_items = [str(x) for x in items]
+
+    def _save_schema_settings(self) -> None:
+        self.settings.setValue("schema/delimiter", self.schema_delimiter)
+        self.settings.setValue("schema/items", self.schema_items)
+        self.settings.sync()
+
+    def _active_preset_name(self) -> str:
+        for name, preset in SCHEMA_PRESETS.items():
+            if name == "Custom":
+                continue
+            preset_delimiter, preset_schema = preset
+            if preset_delimiter == self.schema_delimiter and preset_schema == self.schema_items:
+                return name
+        return "Custom"
+
+    def _update_active_preset_label(self) -> None:
+        preset_name = self._active_preset_name()
+        self.active_preset_label.setText(f"Active File Schema: {preset_name}")

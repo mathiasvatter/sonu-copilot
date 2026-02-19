@@ -7,7 +7,16 @@ cd "$ROOT_DIR"
 APP_NAME="Sonu Co-Pilot"
 ENTRY_POINT="main.py"
 ICON_PATH="icons/sonu.icns"
-APP_VERSION="0.0.1"
+VERSION_FILE="$ROOT_DIR/VERSION"
+if [[ ! -f "$VERSION_FILE" ]]; then
+  echo "Error: Missing version file at $VERSION_FILE"
+  exit 1
+fi
+APP_VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
+if [[ -z "$APP_VERSION" ]]; then
+  echo "Error: VERSION file is empty"
+  exit 1
+fi
 
 if [[ -f "venv/bin/activate" ]]; then
   # Use local virtualenv if present.
