@@ -41,7 +41,7 @@ jobs:
 
   build_macos_x86:
     name: Build macOS x86
-    runs-on: macos-14
+    runs-on: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,7 +53,8 @@ jobs:
 
       - name: Build
         run: |
-          PYTHON_X86="$(command -v python3)" ./build_macos_x86.sh
+          chmod +x ./build_macos.sh
+          ./build_macos.sh
 
       - name: Pack artifact
         run: |
@@ -132,10 +133,10 @@ jobs:
       - name: Collect artifacts into dist
         run: |
           rm -rf dist
-          mkdir -p dist/macos-arm dist/macos-x86 dist/windows
-          cp -v tmp-artifacts/macos-arm/* dist/macos-arm/
-          cp -v tmp-artifacts/macos-x86/* dist/macos-x86/
-          cp -v tmp-artifacts/windows/* dist/windows/
+          mkdir -p dist/arm dist/x86 dist/windows
+          unzip -o tmp-artifacts/macos-arm/*.zip -d dist/arm
+          unzip -o tmp-artifacts/macos-x86/*.zip -d dist/x86
+          cp -av tmp-artifacts/windows/. dist/windows/
           ls -la dist
 
       - name: Run release script
