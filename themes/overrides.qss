@@ -1,3 +1,0 @@
-QMainWindow, QWidget, QGroupBox, QFrame {{
-  background-color: #110f11;
-}}

@@ -23,7 +23,7 @@ def get_primary_color() -> str:
     # Use primaryColor from the local qt_material theme file if available.
     primary_color = "#d4af37"
     try:
-        theme_path = resource_path("themes/dark_gold.xml")
+        theme_path = resource_path("theme/dark_gold.xml")
         tree = ET.parse(theme_path)
         for color_el in tree.getroot().iter("color"):
             if color_el.attrib.get("name") == "primaryColor" and color_el.text:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List
-import os
+import os, sys
 
 from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QPixmap, QIcon, QColor, QFont, QFontDatabase
@@ -49,15 +49,22 @@ class MainWindow(QMainWindow):
     btn_setup: QPushButton
     all_paths: List[str]
 
+    def set_icon(self):
+        icon_candidate = "icons/icon.icns"
+        if sys.platform.startswith("win"):
+            icon_candidate = "icons/icon.ico"
+        icon_path = resource_path(icon_candidate)
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+
     def __init__(self):
         super().__init__()
         self.thread = None
         self.threads = []
         self.setWindowTitle("Sonu Co-Pilot")
         print(f"[INFO] Application started from: {resource_path('.')}")
-        icon_path = resource_path("icons/icon.icns")
-        if icon_path.exists():
-            self.setWindowIcon(QIcon(str(icon_path)))
+
+        self.set_icon()
         self.resize(620, 380)
         self.setAcceptDrops(True)
 

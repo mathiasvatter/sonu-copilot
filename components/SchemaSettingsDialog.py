@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import List
 
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
 )
 
 from components.SampleFileCheck import Wildcard
-from utils.paths import resource_path
 
 WILDCARDS = [wildcard.value for wildcard in Wildcard]
 
@@ -74,6 +73,11 @@ SCHEMA_PRESETS = {
 
 
 class SchemaSettingsDialog(QDialog):
+    @staticmethod
+    def _qcolor_to_rgba(color: QColor, alpha: float) -> str:
+        a = max(0, min(255, int(alpha * 255)))
+        return f"rgba({color.red()}, {color.green()}, {color.blue()}, {a})"
+
     def __init__(self, delimiter: str, schema: List[str], parent: QWidget | None = None):
         super().__init__(parent)
         self.setWindowTitle("File Schema Settings")
@@ -105,6 +109,21 @@ class SchemaSettingsDialog(QDialog):
         self.rows_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.rows_list.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.rows_list.setSpacing(4)
+        self.rows_list.setFrameShape(QListWidget.Shape.NoFrame)
+        self.rows_list.setStyleSheet(
+            """
+            QListWidget {
+                border: none;
+                background: transparent;
+            }
+            QListWidget::item {
+                border-radius: 6px;
+            }
+            QListWidget::item:selected {
+                background: transparent;
+            }
+            """
+        )
         root.addWidget(self.rows_list, 1)
 
         # Add row button
@@ -151,8 +170,18 @@ class SchemaSettingsDialog(QDialog):
 
     def add_row(self, selected: str | None = None) -> None:
         row = QWidget(self.rows_list)
+        row.setObjectName("schemaRow")
+        row.setStyleSheet(
+            """
+            QWidget#schemaRow {
+                background: transparent;
+                border-radius: 6px;
+            }
+            """
+        )
         layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0,0,0,0)
+        # layout.setSpacing(10)
 
         combo = QComboBox(row)
         combo.addItems(WILDCARDS)
