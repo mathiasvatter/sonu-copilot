@@ -50,9 +50,9 @@ class MainWindow(QMainWindow):
     all_paths: List[str]
 
     def set_icon(self):
-        icon_candidate = "icons/icon.icns"
+        icon_candidate = "icons/sonu.icns"
         if sys.platform.startswith("win"):
-            icon_candidate = "icons/icon.ico"
+            icon_candidate = "icons/sonu.ico"
         icon_path = resource_path(icon_candidate)
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))

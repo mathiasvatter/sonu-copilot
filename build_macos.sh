@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 
 APP_NAME="Sonu Co-Pilot"
 ENTRY_POINT="main.py"
-ICON_PATH="icons/icon.icns"
+ICON_PATH="icons/sonu.icns"
 APP_VERSION="0.0.1"
 
 if [[ -f "venv/bin/activate" ]]; then
