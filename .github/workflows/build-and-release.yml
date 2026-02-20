@@ -1,7 +1,8 @@
 name: Build and Release
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main ]
 
 permissions:
   contents: write
@@ -22,6 +23,9 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install -r requirements.txt
 
+      - name: Show PySide6 version
+        run: python3 -m pip show PySide6
+
       - name: Build
         run: |
           chmod +x ./build_macos.sh
@@ -36,12 +40,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-macos-arm
-          path: release-assets/*
+          path: release-assets/*.zip
           if-no-files-found: error
 
   build_macos_x86:
     name: Build macOS x86
-    runs-on: macos-13
+    runs-on: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,9 +55,16 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install dependencies
+        run: python3 -m pip install -r requirements.txt
+
+      - name: Show PySide6 version
+        run: python3 -m pip show PySide6
+
       - name: Build
         run: |
-          PYTHON_X86="$(command -v python3)" ./build_macos_x86.sh
+          chmod +x ./build_macos.sh
+          ./build_macos.sh
 
       - name: Pack artifact
         run: |
@@ -64,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-macos-x86
-          path: release-assets/*
+          path: release-assets/*.zip
           if-no-files-found: error
 
   build_windows:
@@ -86,19 +97,21 @@ jobs:
         shell: pwsh
         run: ./build_windows.ps1
 
-      - name: Collect exe artifact
+      - name: Pack artifact
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release-assets | Out-Null
           $exe = Get-ChildItem -Path dist -Recurse -Filter "*.exe" | Select-Object -First 1
           if (-not $exe) { throw "No .exe found in dist/" }
-          Copy-Item -Path $exe.FullName -Destination "release-assets/sonu-copilot-windows-x86_64.exe" -Force
+          $zipPath = "release-assets/sonu-copilot-windows-x86_64.zip"
+          if (Test-Path $zipPath) { Remove-Item -Path $zipPath -Force }
+          Compress-Archive -Path $exe.FullName -DestinationPath $zipPath
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-windows
-          path: release-assets/*
+          path: release-assets/*.zip
           if-no-files-found: error
 
   release:
@@ -129,14 +142,14 @@ jobs:
           name: build-windows
           path: tmp-artifacts/windows
 
-      - name: Collect artifacts into dist
+      - name: Collect release assets
         run: |
-          rm -rf dist
-          mkdir -p dist/macos-arm dist/macos-x86 dist/windows
-          cp -v tmp-artifacts/macos-arm/* dist/macos-arm/
-          cp -v tmp-artifacts/macos-x86/* dist/macos-x86/
-          cp -v tmp-artifacts/windows/* dist/windows/
-          ls -la dist
+          rm -rf release-assets
+          mkdir -p release-assets
+          cp -v tmp-artifacts/macos-arm/*.zip release-assets/
+          cp -v tmp-artifacts/macos-x86/*.zip release-assets/
+          cp -v tmp-artifacts/windows/*.zip release-assets/
+          ls -la release-assets
 
       - name: Run release script
         env:

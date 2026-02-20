@@ -125,9 +125,16 @@ class AudioFileCheckThread(QThread):
     progress_size_updated = Signal(int)
     results_ready = Signal(str)
 
-    def __init__(self, files):
+    def __init__(self, files, checks=None):
         super().__init__()
         self.files = files
+        self.checks = {
+            "is_wav_silent": True,
+            "wav_riff_size_matches_file": True,
+            "wav_has_loop_points": True,
+        }
+        if isinstance(checks, dict):
+            self.checks.update({k: bool(v) for k, v in checks.items()})
         self.issues = {
             "Silent Audio": [],
             "RIFF Size Mismatch": [],
@@ -147,11 +154,11 @@ class AudioFileCheckThread(QThread):
                 continue
 
             try:
-                if is_wav_silent(f):
+                if self.checks["is_wav_silent"] and is_wav_silent(f):
                     self.append_issue("Silent Audio", f)
-                if not wav_riff_size_matches_file(f):
+                if self.checks["wav_riff_size_matches_file"] and not wav_riff_size_matches_file(f):
                     self.append_issue("RIFF Size Mismatch", f)
-                if not wav_has_loop_points(f):
+                if self.checks["wav_has_loop_points"] and not wav_has_loop_points(f):
                     self.append_issue("Missing Loop Points", f)
             except Exception:
                 self.append_issue("Unreadable WAV", f)
