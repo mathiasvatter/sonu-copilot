@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from pathlib import Path
 
 from components.Threads import AudioFileCheckThread, FileCheckThread
+from components.AudioFileSettingsDialog import AudioFileSettingsDialog
 from components.SchemaSettingsDialog import SchemaSettingsDialog, SCHEMA_PRESETS
 from utils.paths import resource_path, get_primary_color
 
@@ -177,7 +178,13 @@ class MainWindow(QMainWindow):
             "VeloMin-VeloMax",
             "RootKey",
         ]
+        self.audio_checks = {
+            "is_wav_silent": True,
+            "wav_riff_size_matches_file": True,
+            "wav_has_loop_points": True,
+        }
         self._load_schema_settings()
+        self._load_audio_check_settings()
         self._update_active_preset_label()
 
     def createDropPanel(self, panel: QWidget):
@@ -247,7 +254,7 @@ class MainWindow(QMainWindow):
                 schema=self.schema_items,
                 delimiter=self.schema_delimiter,
             ),
-            AudioFileCheckThread(files=self.all_paths),
+            AudioFileCheckThread(files=self.all_paths, checks=self.audio_checks),
         ]
 
         self.thread = self.threads[self.combo.currentIndex()]
@@ -317,11 +324,20 @@ class MainWindow(QMainWindow):
                 self._update_active_preset_label()
                 print("[SETUP] Updated schema:", self.schema_delimiter, self.schema_items)
             return
+        if mode == "Audio File Check":
+            dialog = AudioFileSettingsDialog(
+                checks=self.audio_checks,
+                parent=self,
+            )
+            if dialog.exec():
+                self.audio_checks = dialog.get_checks()
+                self._save_audio_check_settings()
+                print("[SETUP] Updated audio checks:", self.audio_checks)
+            return
         return
 
     def update_setup_button(self):
-        mode = self.combo.currentText()
-        self.btn_setup.setEnabled(mode == "Filename Check")
+        self.btn_setup.setEnabled(self.combo.currentText() in ("Filename Check", "Audio File Check"))
 
     def _load_schema_settings(self) -> None:
         delimiter = self.settings.value("schema/delimiter", self.schema_delimiter)
@@ -337,6 +353,16 @@ class MainWindow(QMainWindow):
     def _save_schema_settings(self) -> None:
         self.settings.setValue("schema/delimiter", self.schema_delimiter)
         self.settings.setValue("schema/items", self.schema_items)
+        self.settings.sync()
+
+    def _load_audio_check_settings(self) -> None:
+        for key in self.audio_checks:
+            value = self.settings.value(f"audio_checks/{key}", self.audio_checks[key], type=bool)
+            self.audio_checks[key] = bool(value)
+
+    def _save_audio_check_settings(self) -> None:
+        for key, value in self.audio_checks.items():
+            self.settings.setValue(f"audio_checks/{key}", bool(value))
         self.settings.sync()
 
     def _active_preset_name(self) -> str:
