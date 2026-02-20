@@ -36,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-macos-arm
-          path: release-assets/*
+          path: release-assets/*.zip
           if-no-files-found: error
 
   build_macos_x86:
@@ -50,6 +50,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Install dependencies
+        run: python3 -m pip install -r requirements.txt
 
       - name: Build
         run: |
@@ -65,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-macos-x86
-          path: release-assets/*
+          path: release-assets/*.zip
           if-no-files-found: error
 
   build_windows:
@@ -87,19 +90,21 @@ jobs:
         shell: pwsh
         run: ./build_windows.ps1
 
-      - name: Collect exe artifact
+      - name: Pack artifact
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release-assets | Out-Null
           $exe = Get-ChildItem -Path dist -Recurse -Filter "*.exe" | Select-Object -First 1
           if (-not $exe) { throw "No .exe found in dist/" }
-          Copy-Item -Path $exe.FullName -Destination "release-assets/sonu-copilot-windows-x86_64.exe" -Force
+          $zipPath = "release-assets/sonu-copilot-windows-x86_64.zip"
+          if (Test-Path $zipPath) { Remove-Item -Path $zipPath -Force }
+          Compress-Archive -Path $exe.FullName -DestinationPath $zipPath
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-windows
-          path: release-assets/*
+          path: release-assets/*.zip
           if-no-files-found: error
 
   release:
@@ -130,14 +135,14 @@ jobs:
           name: build-windows
           path: tmp-artifacts/windows
 
-      - name: Collect artifacts into dist
+      - name: Collect release assets
         run: |
-          rm -rf dist
-          mkdir -p dist/arm dist/x86 dist/windows
-          unzip -o tmp-artifacts/macos-arm/*.zip -d dist/arm
-          unzip -o tmp-artifacts/macos-x86/*.zip -d dist/x86
-          cp -av tmp-artifacts/windows/. dist/windows/
-          ls -la dist
+          rm -rf release-assets
+          mkdir -p release-assets
+          cp -v tmp-artifacts/macos-arm/*.zip release-assets/
+          cp -v tmp-artifacts/macos-x86/*.zip release-assets/
+          cp -v tmp-artifacts/windows/*.zip release-assets/
+          ls -la release-assets
 
       - name: Run release script
         env:
