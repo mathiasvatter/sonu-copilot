@@ -34,7 +34,11 @@ jobs:
       - name: Pack artifact
         run: |
           mkdir -p release-assets
-          ditto -c -k --sequesterRsrc --keepParent "dist/Sonu Co-Pilot.app" "release-assets/sonu-copilot-macos-arm64.zip"
+          rm -rf release-assets/macos-arm64
+          mkdir -p release-assets/macos-arm64
+          cp -R "dist/Sonu Co-Pilot.app" "release-assets/macos-arm64/"
+          cp "dist/README-macOS.txt" "release-assets/macos-arm64/"
+          ditto -c -k --sequesterRsrc --keepParent "release-assets/macos-arm64" "release-assets/sonu-copilot-macos-arm64.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -69,7 +73,11 @@ jobs:
       - name: Pack artifact
         run: |
           mkdir -p release-assets
-          ditto -c -k --sequesterRsrc --keepParent "dist/Sonu Co-Pilot.app" "release-assets/sonu-copilot-macos-x86_64.zip"
+          rm -rf release-assets/macos-x86_64
+          mkdir -p release-assets/macos-x86_64
+          cp -R "dist/Sonu Co-Pilot.app" "release-assets/macos-x86_64/"
+          cp "dist/README-macOS.txt" "release-assets/macos-x86_64/"
+          ditto -c -k --sequesterRsrc --keepParent "release-assets/macos-x86_64" "release-assets/sonu-copilot-macos-x86_64.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
