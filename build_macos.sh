@@ -36,19 +36,19 @@ pyinstaller \
   --paths "$ROOT_DIR" \
   "$ENTRY_POINT"
 
-INFO_PLIST="dist/${APP_NAME}.app/Contents/Info.plist"
-if [[ -f "$INFO_PLIST" ]]; then
-  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$INFO_PLIST" 2>/dev/null \
-    || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $APP_VERSION" "$INFO_PLIST"
-  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_VERSION" "$INFO_PLIST" 2>/dev/null \
-    || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $APP_VERSION" "$INFO_PLIST"
-fi
+# INFO_PLIST="dist/${APP_NAME}.app/Contents/Info.plist"
+# if [[ -f "$INFO_PLIST" ]]; then
+#   /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$INFO_PLIST" 2>/dev/null \
+#     || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $APP_VERSION" "$INFO_PLIST"
+#   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_VERSION" "$INFO_PLIST" 2>/dev/null \
+#     || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $APP_VERSION" "$INFO_PLIST"
+# fi
 
-APP_PATH="dist/${APP_NAME}.app"
-# Remove any existing signature so we do not ship a bundle with invalid signature metadata.
-if codesign -dv "$APP_PATH" >/dev/null 2>&1; then
-  codesign --remove-signature "$APP_PATH"
-fi
+# APP_PATH="dist/${APP_NAME}.app"
+# # Remove any existing signature so we do not ship a bundle with invalid signature metadata.
+# if codesign -dv "$APP_PATH" >/dev/null 2>&1; then
+#   codesign --remove-signature "$APP_PATH"
+# fi
 
 rm -rf "build" "${APP_NAME}.spec"
 rm -rf "dist/${APP_NAME}"
