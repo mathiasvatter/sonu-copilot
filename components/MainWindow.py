@@ -42,6 +42,7 @@ class MainWindow(QMainWindow):
     progress_bar: QProgressBar
     result_widget: QWidget
     result_status: QLabel
+    result_summary: QLabel
     result_text: QTextEdit
     result_copy_btn: QPushButton
     result_btn: QPushButton
@@ -51,6 +52,7 @@ class MainWindow(QMainWindow):
     active_preset_label: QLabel
     all_paths: List[str]
     settings: QSettings
+    filename_summary_text: str
 
     def set_icon(self):
         icon_candidate = "icons/sonu.icns"
@@ -65,6 +67,7 @@ class MainWindow(QMainWindow):
         self.settings = QSettings("Sonu", "CoPilot")
         self.thread = None
         self.threads = []
+        self.filename_summary_text = ""
         self.setWindowTitle("Sonu Co-Pilot")
         print(f"[INFO] Application started from: {resource_path('.')}")
 
@@ -116,6 +119,11 @@ class MainWindow(QMainWindow):
         self.result_status.setStyleSheet(
             f"font-size: 24px; font-weight: 700; color: {get_primary_color()};"
         )
+        self.result_summary = QLabel("", self.result_widget)
+        self.result_summary.setWordWrap(True)
+        self.result_summary.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.result_summary.setStyleSheet("font-size: 13px; color: #666;")
+        self.result_summary.hide()
         self.result_text = QTextEdit(self.result_widget)
         self.result_text.setReadOnly(True)
         self.result_text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
@@ -141,6 +149,7 @@ class MainWindow(QMainWindow):
         btn_row.addStretch(1)
         btn_row.addWidget(self.result_btn, 0, Qt.AlignmentFlag.AlignRight)
         r.addWidget(self.result_status)
+        r.addWidget(self.result_summary)
         r.addWidget(self.result_text)
         r.addLayout(btn_row)
 
@@ -253,16 +262,20 @@ class MainWindow(QMainWindow):
                 files=self.all_paths,
                 schema=self.schema_items,
                 delimiter=self.schema_delimiter,
+                preset_name=self._active_preset_name(),
             ),
             AudioFileCheckThread(files=self.all_paths, checks=self.audio_checks),
         ]
 
         self.thread = self.threads[self.combo.currentIndex()]
+        self.filename_summary_text = ""
         self.thread.progress_size_updated.connect(lambda x: self.progress_bar.setMaximum(x))
         self.thread.progress_bar_updated.connect(lambda x: self.progress_bar.setValue(x))
         self.thread.progress_label_updated.connect(lambda text: self.progress_label.setText(text))
         self.thread.results_ready.connect(self.on_thread_results)
         self.thread.finished.connect(self.on_thread_finished)
+        if isinstance(self.thread, FileCheckThread):
+            self.thread.summary_ready.connect(self.on_filename_summary_ready)
         self.thread.start()
 
 
@@ -271,15 +284,32 @@ class MainWindow(QMainWindow):
         self.result_text.setPlainText(text)
         if "Total issues: 0" in text:
             self.result_status.setText("Congratulations! You're good to go! 🎉")
+            if isinstance(self.thread, FileCheckThread):
+                if self.filename_summary_text:
+                    self.result_summary.setText(self.filename_summary_text)
+                    self.result_summary.show()
+                else:
+                    self.result_summary.clear()
+                    self.result_summary.hide()
+            else:
+                self.result_summary.clear()
+                self.result_summary.hide()
         else:
             self.result_status.setText("You Fucked up! 😱")
+            self.result_summary.clear()
+            self.result_summary.hide()
         self.stack.setCurrentIndex(2)
 
     def on_thread_finished(self):
         self.progress_label.setText("Done.")
 
+    def on_filename_summary_ready(self, summary: str):
+        self.filename_summary_text = summary
+
     def on_back_to_drop_clicked(self):
         self.result_text.clear()
+        self.result_summary.clear()
+        self.result_summary.hide()
         self.stack.setCurrentIndex(0)
         self.setAcceptDrops(True)
 

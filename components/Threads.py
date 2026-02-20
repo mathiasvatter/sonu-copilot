@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 from PySide6.QtCore import QThread, Signal
 
@@ -15,7 +16,7 @@ from components.SampleFileCheck import (
     is_root_key_token,
     is_round_robin_token,
     is_velocity_token,
-    split_by_delimiter, is_semitones_token, is_up_do_token,
+    split_by_delimiter, is_semitones_token, is_up_do_token, get_root_key, get_velocity, get_round_robin,
 )
 from utils.paths import shorten_path
 
@@ -25,12 +26,14 @@ class FileCheckThread(QThread):
     progress_label_updated = Signal(str)
     progress_size_updated = Signal(int)
     results_ready = Signal(str)
+    summary_ready = Signal(str)
 
-    def __init__(self, files, schema=None, delimiter: str = "_"):
+    def __init__(self, files, schema=None, delimiter: str = "_", preset_name: str = "Custom"):
         super().__init__()
         self.files = files
         self.schema = schema or []
         self.delimiter = delimiter
+        self.preset_name = preset_name
         self.issues = {
             "Leading/Trailing Whitespace": [],
             "Reaper Suffix": [],
@@ -42,6 +45,7 @@ class FileCheckThread(QThread):
             "Up/Down Format": [],
             "Dynamic Format": [],
         }
+        self.summary_text = ""
 
     def append_issue(self, issue: str, file: str) -> None:
         shortened = shorten_path(file, 2)
@@ -74,10 +78,19 @@ class FileCheckThread(QThread):
             self.progress_bar_updated.emit(progress)
             self.progress_label_updated.emit(f)
 
+        total_issues = self.total_issues()
+        if total_issues == 0:
+            self.summary_text = self.build_summary()
+        else:
+            self.summary_text = ""
+        self.summary_ready.emit(self.summary_text)
         self.results_ready.emit(self.results_text())
         print("[INFO] File check complete. Issues found:")
         for issue, files in self.issues.items():
             print(f"  {issue}: {len(files)} files")
+
+    def total_issues(self) -> int:
+        return sum(len(files) for files in self.issues.values())
 
     def results_text(self) -> str:
         lines = ["Filename Check Results:", ""]
@@ -93,6 +106,89 @@ class FileCheckThread(QThread):
             lines.append("")
         lines.append(f"Total issues: {total}")
         return "\n".join(lines)
+
+    def build_summary(self) -> str:
+        self.progress_size_updated.emit(len(self.files))
+        self.progress_label_updated.emit("Building filename summary...")
+        progress = 0
+
+        instrument_idx = self._schema_index(Wildcard.INSTRUMENT_NAME)
+        articulation_idx = self._schema_index(Wildcard.ARTICULATION)
+        root_idx = self._schema_index(Wildcard.ROOT_KEY)
+        velo_idx = self._schema_index(Wildcard.VELO_MIN_MAX)
+        rr_idx = self._schema_index(Wildcard.ROUND_ROBIN)
+
+        instruments = set()
+        articulations = set()
+        min_root = None
+        max_root = None
+        velocities = set()
+        round_robins = set()
+
+        for f in self.files:
+            stem, ext = os.path.splitext(f)
+            if ext.lower() not in (".wav", ".aiff", ".flac"):
+                continue
+
+            parts = split_by_delimiter(stem, self.delimiter)
+            if self.schema and len(parts) != len(self.schema):
+                continue
+
+            if instrument_idx is not None:
+                instrument_name = parts[instrument_idx].strip()
+                instruments.add(instrument_name)
+
+            if articulation_idx is not None:
+                articulation = parts[articulation_idx].strip()
+                articulations.add(articulation)
+
+            if root_idx is not None:
+                midi = get_root_key(parts[root_idx])
+                if midi is not None:
+                    min_root = midi if min_root is None else min(min_root, midi)
+                    max_root = midi if max_root is None else max(max_root, midi)
+
+            if velo_idx is not None:
+                velo = get_velocity(parts[velo_idx])
+                if velo is not None:
+                    velocities.add(velo)
+
+            if rr_idx is not None:
+                rr = get_round_robin(parts[rr_idx])
+                if rr is not None:
+                    round_robins.add(rr)
+
+            progress += 1
+            self.progress_bar_updated.emit(progress)
+            self.progress_label_updated.emit(f)
+
+        instrument_text = ", ".join(sorted(instruments)) if instruments else "-"
+        articulation_text = ", ".join(sorted(articulations)) if articulations else "-"
+        range_text = "-"
+        if min_root is not None and max_root is not None:
+            range_text = f"{min_root}-{max_root} ({self._midi_to_note(min_root)} to {self._midi_to_note(max_root)})"
+
+        return (
+            f"Instrument: {instrument_text}\n"
+            f"Articulation: {articulation_text}\n"
+            f"Type: {self.preset_name}\n"
+            f"Range: {range_text}\n"
+            f"Dynamic Layers: {len(velocities)}\n"
+            f"Round Robins: {len(round_robins)}"
+        )
+
+    def _schema_index(self, wildcard: Wildcard) -> Optional[int]:
+        try:
+            return self.schema.index(wildcard.value)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _midi_to_note(midi: int) -> str:
+        notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+        note = notes[midi % 12]
+        octave = (midi // 12) - 1
+        return f"{note}{octave}"
 
     def _check_schema_parts(self, parts, file_path: str) -> None:
         for idx, raw in enumerate(self.schema):
