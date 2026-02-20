@@ -44,6 +44,12 @@ if [[ -f "$INFO_PLIST" ]]; then
     || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $APP_VERSION" "$INFO_PLIST"
 fi
 
+APP_PATH="dist/${APP_NAME}.app"
+# Remove any existing signature so we do not ship a bundle with invalid signature metadata.
+if codesign -dv "$APP_PATH" >/dev/null 2>&1; then
+  codesign --remove-signature "$APP_PATH"
+fi
+
 rm -rf "build" "${APP_NAME}.spec"
 rm -rf "dist/${APP_NAME}"
 
