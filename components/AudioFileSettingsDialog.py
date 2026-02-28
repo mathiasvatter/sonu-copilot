@@ -37,6 +37,17 @@ class AudioFileSettingsDialog(QDialog):
         self.loop_checkbox.setChecked(bool(checks.get("wav_has_loop_points", True)))
         root.addWidget(self.loop_checkbox)
 
+        self.hard_edges_checkbox = QCheckBox(
+            "Flag hard start/end (not near zero crossing)",
+            self,
+        )
+        self.hard_edges_checkbox.setChecked(bool(checks.get("wav_has_hard_edges", False)))
+        root.addWidget(self.hard_edges_checkbox)
+
+        self.clipping_checkbox = QCheckBox("Detect clipping", self)
+        self.clipping_checkbox.setChecked(bool(checks.get("wav_has_clipping", False)))
+        root.addWidget(self.clipping_checkbox)
+
         root.addStretch(1)
 
         footer = QHBoxLayout()
@@ -54,4 +65,6 @@ class AudioFileSettingsDialog(QDialog):
             "is_wav_silent": self.silent_checkbox.isChecked(),
             "wav_riff_size_matches_file": self.riff_checkbox.isChecked(),
             "wav_has_loop_points": self.loop_checkbox.isChecked(),
+            "wav_has_hard_edges": self.hard_edges_checkbox.isChecked(),
+            "wav_has_clipping": self.clipping_checkbox.isChecked(),
         }

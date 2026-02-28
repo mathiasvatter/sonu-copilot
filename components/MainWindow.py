@@ -191,6 +191,8 @@ class MainWindow(QMainWindow):
             "is_wav_silent": True,
             "wav_riff_size_matches_file": True,
             "wav_has_loop_points": True,
+            "wav_has_hard_edges": False,
+            "wav_has_clipping": False,
         }
         self._load_schema_settings()
         self._load_audio_check_settings()
