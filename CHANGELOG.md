@@ -1,8 +1,9 @@
 # Changelog
 
 
-## [v0.0.1] - 2026-02-20
+## [v0.0.2] - 2026-02-28
 
-- Initial release of Sonu Copilot.
+- Add option to check for hard edges in wav files.
+- Add option to check for clipping in wav files.
 
 > Note: Since the executables are not signed, you may need to bypass security warnings.

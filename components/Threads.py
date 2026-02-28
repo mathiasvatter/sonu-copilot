@@ -7,6 +7,8 @@ from components.AudioFileCheck import (
     is_wav_silent,
     wav_riff_size_matches_file,
     wav_has_loop_points,
+    wav_has_hard_edges,
+    wav_has_clipping,
 )
 from components.SampleFileCheck import (
     Wildcard,
@@ -228,6 +230,8 @@ class AudioFileCheckThread(QThread):
             "is_wav_silent": True,
             "wav_riff_size_matches_file": True,
             "wav_has_loop_points": True,
+            "wav_has_hard_edges": False,
+            "wav_has_clipping": False,
         }
         if isinstance(checks, dict):
             self.checks.update({k: bool(v) for k, v in checks.items()})
@@ -235,6 +239,8 @@ class AudioFileCheckThread(QThread):
             "Silent Audio": [],
             "RIFF Size Mismatch": [],
             "Missing Loop Points": [],
+            "Hard Start/End (No Zero Crossing)": [],
+            "Clipping Detected": [],
             "Unreadable WAV": [],
         }
 
@@ -256,6 +262,10 @@ class AudioFileCheckThread(QThread):
                     self.append_issue("RIFF Size Mismatch", f)
                 if self.checks["wav_has_loop_points"] and not wav_has_loop_points(f):
                     self.append_issue("Missing Loop Points", f)
+                if self.checks["wav_has_hard_edges"] and wav_has_hard_edges(f):
+                    self.append_issue("Hard Start/End (No Zero Crossing)", f)
+                if self.checks["wav_has_clipping"] and wav_has_clipping(f):
+                    self.append_issue("Clipping Detected", f)
             except Exception:
                 self.append_issue("Unreadable WAV", f)
 
