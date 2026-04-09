@@ -24,7 +24,7 @@ WILDCARDS = [wildcard.value for wildcard in Wildcard]
 
 SCHEMA_PRESETS = {
     "Custom": (None, None),
-    "Sustain": (
+    "Sustain / One Shot": (
             "_",
             [
                 "InstrumentName",
@@ -35,17 +35,6 @@ SCHEMA_PRESETS = {
                 "RootKey",
             ],
         ),
-    "One Shot": (
-        "_",
-        [
-            "InstrumentName",
-            "Articulation",
-            "MicPosition",
-            "VeloMin-VeloMax",
-            "RoundRobin",
-            "RootKey",
-        ],
-    ),
     "Transition": (
         "_",
         [

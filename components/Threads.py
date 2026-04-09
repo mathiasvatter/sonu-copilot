@@ -192,6 +192,14 @@ class FileCheckThread(QThread):
         octave = (midi // 12) - 1
         return f"{note}{octave}"
 
+    @staticmethod
+    def _is_velocity_range_ascending(token: str) -> bool:
+        try:
+            velo_min, velo_max = (int(value, 10) for value in token.split("-"))
+        except (TypeError, ValueError):
+            return False
+        return velo_min <= velo_max
+
     def _check_schema_parts(self, parts, file_path: str) -> None:
         for idx, raw in enumerate(self.schema):
             try:
@@ -202,7 +210,9 @@ class FileCheckThread(QThread):
 
             if wildcard == Wildcard.IGNORE:
                 continue
-            if wildcard == Wildcard.VELO_MIN_MAX and not is_velocity_token(token):
+            if wildcard == Wildcard.VELO_MIN_MAX and (
+                not is_velocity_token(token) or not self._is_velocity_range_ascending(token)
+            ):
                 self.append_issue("Velocity Format", file_path)
             elif wildcard == Wildcard.ROOT_KEY and not is_root_key_token(token):
                 self.append_issue("RootKey Format", file_path)
